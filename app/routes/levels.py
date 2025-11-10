@@ -53,14 +53,15 @@ async def get_levels(session: SessionDep, user_id: CurrentUser) -> list[LevelRes
                 .where(Card.level_id == level.id)
             ).one()
 
-            # Count mastered cards (next_review > 7 days from now)
+            # Count mastered cards (cards that have ever achieved 7+ days stability)
+            # This matches the level progression logic in CardService._check_and_promote_level
             mastered_cards = session.exec(
                 select(func.count())
                 .select_from(CardProgress)
                 .join(Card, Card.id == CardProgress.card_id)
                 .where(CardProgress.user_id == user_id)
                 .where(Card.level_id == level.id)
-                .where(CardProgress.next_review > datetime.now(timezone.utc) + timedelta(days=7))
+                .where(CardProgress.highest_stability >= 7.0)
             ).one()
 
             progress_percentage = (
